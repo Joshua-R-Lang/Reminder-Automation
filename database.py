@@ -1,36 +1,62 @@
 import pandas as pd
+import logging
 from sqlalchemy import create_engine as sqlalchemy_create_engine
 import pymysql
 import smtplib
 from email.mime.text import MIMEText
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+
+file_handler = logging.FileHandler('reminder_automation.log')
+file_handler.setLevel(logging.DEBUG)
+
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.DEBUG)
+
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+file_handler.setFormatter(formatter)
+console_handler.setFormatter(formatter)
+
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
+
+DB_URL = os.getenv("DATABASE_URL")
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
+EMAIL_SENDER = os.getenv("EMAIL_SENDER")
 
 def create_db_engine():
-    db_url = "mysql+pymysql://root:Darfoklutz11!@localhost/reminders"
     try:
-        engine = sqlalchemy_create_engine(db_url)
+        engine = sqlalchemy_create_engine(DB_URL)
+        logging.info("Database engine created successfully.")
         return engine
     except Exception as e:
-        print(f"Error creating engine: {e}")
+        logging.error(f"Error creating engine: {e}")
         return None
 
 def get_reminder_row(engine, reminder_name):
     query = "SELECT * FROM Reminder_Config WHERE Reminder_Name = %s"
     try:
         reminder_row = pd.read_sql(query, engine, params=(reminder_name,))
+        logging.info(f"Reminder row fetched for {reminder_name}.")
         return reminder_row
     except Exception as e:
-        print(f"An error occurred: {e}")
+        logging.error(f"An error occurred while fetching reminder: {e}")
         return None
 
 def delete_reminder_row(engine, reminder_name):
     delete_query = "DELETE FROM Reminder_Config WHERE Reminder_Name = %s"
     try:
         with engine.connect() as connection:
-            result = connection.execute(delete_query, (reminder_name, ))
-            print(f"Deleted rows: {result.rowcount}")
+            result = connection.execute(delete_query, (reminder_name,))
+            logging.info(f"Deleted rows: {result.rowcount} for reminder {reminder_name}.")
             return result.rowcount
     except Exception as e:
-        print(f"An error occurred: {e}")
+        logging.error(f"An error occurred while deleting reminder: {e}")
         return None
     
 def create_reminder_row(engine, reminder_name, reminder_description, event_start, event_end):
@@ -42,26 +68,29 @@ def create_reminder_row(engine, reminder_name, reminder_description, event_start
     }])
     try: 
         df.to_sql('Reminder_Config', engine, if_exists='append', index=False)
+        logging.info(f"Reminder '{reminder_name}' inserted into the database.")
     except Exception as e:
-        print(f"An error occurred: {e}")
+        logging.error(f"An error occurred while creating reminder: {e}")
         return None
 
-
-def send_email(subject, body, sender, recipients, password):
+def send_email(subject, body, recipients):
     msg = MIMEText(body)
     msg['Subject'] = subject
-    msg['From'] = sender
+    msg['From'] = EMAIL_SENDER
     msg['To'] = ', '.join(recipients)
     
-    with smtplib.SMTP('smtp.office365.com', 587) as smtp_server:
-        smtp_server.starttls()
-        smtp_server.login(sender, password)
-        smtp_server.sendmail(sender, recipients, msg.as_string())
-    print("Message sent.")
-
+    try:
+        with smtplib.SMTP('smtp.office365.com', 587) as smtp_server:
+            smtp_server.starttls()
+            smtp_server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+            smtp_server.sendmail(EMAIL_SENDER, recipients, msg.as_string())
+            logging.info("Email sent successfully.")
+    except Exception as e:
+        logging.error(f"Failed to send email: {e}")
 
 def format_reminder_to_string(reminder_row):
     if reminder_row.empty:
+        logging.info("No reminder found.")
         return "No reminder found."
 
     reminder = reminder_row.iloc[0].to_dict()
@@ -73,5 +102,6 @@ def format_reminder_to_string(reminder_row):
         f"End Time: {reminder['Event_End']}"
     )
     
+    logging.info(f"Formatted reminder: {formatted_string}")
+    
     return formatted_string
-
