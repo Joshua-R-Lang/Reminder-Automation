@@ -72,6 +72,41 @@ def create_reminder_row(engine, reminder_name, reminder_description, event_start
     except Exception as e:
         logging.error(f"An error occurred while creating reminder: {e}")
         return None
+    
+def update_reminder_row(engine, reminder_name, reminder_description=None, event_start=None, event_end=None):
+    try:
+        query = "SELECT * FROM Reminder_Config WHERE Reminder_Name = %s"
+        reminder_df = pd.read_sql(query, engine, params=(reminder_name,))
+
+        if reminder_df.empty:
+            logging.info(f"No reminder found with name {reminder_name}.")
+            return None
+        
+        if reminder_description:
+            reminder_df['Reminder_Description'] = reminder_description
+        if event_start:
+            reminder_df['Event_Start'] = event_start
+        if event_end:
+            reminder_df['Event_End'] = event_end
+        
+        with engine.connect() as connection:
+            update_query = """
+            UPDATE Reminder_Config
+                SET Reminder_Description = %s, Event_Start = %s, Event_End = %s
+                WHERE Reminder_Name = %s
+            """
+            params = (reminder_df['Reminder_Description'].values[0], 
+                        reminder_df['Event_Start'].values[0],
+                        reminder_df['Event_End'].values[0],
+                        reminder_name)
+            connection.execute(update_query, params)
+            
+        logging.info(f"Reminder '{reminder_name}' updated successfully.")
+        return True
+
+    except Exception as e:
+        logging.error(f"An error occurred while updating reminder: {e}")
+        return None
 
 def send_email(subject, body, recipients):
     msg = MIMEText(body)
