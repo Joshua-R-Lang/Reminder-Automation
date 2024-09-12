@@ -6,6 +6,9 @@ import smtplib
 from email.mime.text import MIMEText
 from dotenv import load_dotenv
 import os
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.date import DateTrigger
+from datetime import datetime, timedelta
 
 load_dotenv()
 
@@ -107,6 +110,25 @@ def update_reminder_row(engine, reminder_name, reminder_description=None, event_
     except Exception as e:
         logging.error(f"An error occurred while updating reminder: {e}")
         return None
+    
+def schedule_reminder(reminder_name, event_start, formatted_string, recipients):
+    try:
+        scheduler = BackgroundScheduler()
+        event_start_time = datetime.strptime(event_start, "%Y-%m-%d %H:%M:%S")
+        trigger = DateTrigger(run_date=event_start_time - timedelta(minutes=60))
+        scheduler.add_job(send_scheduled_reminder, trigger, args=[f"Reminder for {reminder_name}", formatted_string, recipients])
+        scheduler.start()
+        logging.info(f"Reminder '{reminder_name}' scheduled for {event_start_time}.")
+    except Exception as e:
+        logging.error(f"Failed to schedule reminder '{reminder_name}': {e}")
+
+def send_scheduled_reminder(reminder_name, event_start, formatted_string, recipients):
+    subject = f"Reminder for {reminder_name}" 
+    try:
+        send_email(subject, formatted_string, recipients)
+        logging.info(f"Scheduled reminder '{reminder_name}' sent successfully.")
+    except Exception as e:
+        logging.error(f"Failed to send scheduled reminder '{reminder_name}': {e}")
 
 def send_email(subject, body, recipients):
     msg = MIMEText(body)
