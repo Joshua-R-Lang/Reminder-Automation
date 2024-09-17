@@ -14,8 +14,8 @@ def main():
         if create == "yes":
             reminder_name = str(input("What is the reminder name: "))
             reminder_description = str(input("What is the reminder description: "))
-            event_start = str(input("What is the event start time (format - HH:MM:SS): "))
-            event_end = str(input("What is the event end time (format - HH:MM:SS): "))
+            event_start = str(input("What is the event start time (format: YYYY-MM-DD HH:MM:SS): "))
+            event_end = str(input("What is the event end time (format: YYYY-MM-DD HH:MM:SS): "))
             create_reminder_row(engine, reminder_name, reminder_description, event_start, event_end)
         
         delete = str(input("Would you like to delete a reminder yes or no: "))

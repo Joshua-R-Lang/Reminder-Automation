@@ -115,10 +115,12 @@ def schedule_reminder(reminder_name, event_start, formatted_string, recipients):
     try:
         scheduler = BackgroundScheduler()
         event_start_time = datetime.strptime(event_start, "%Y-%m-%d %H:%M:%S")
-        trigger = DateTrigger(run_date=event_start_time - timedelta(minutes=60))
-        scheduler.add_job(send_scheduled_reminder, trigger, args=[f"Reminder for {reminder_name}", formatted_string, recipients])
+        trigger_24h = DateTrigger(run_date=event_start_time - timedelta(minutes=1440))
+        trigger_1h = DateTrigger(run_date=event_start_time - timedelta(minutes=60))
+        scheduler.add_job(send_scheduled_reminder, trigger_24h, args=[f"Reminder for {reminder_name}", formatted_string, recipients])
+        scheduler.add_job(send_scheduled_reminder, trigger_1h, args=[f"Reminder for {reminder_name}", formatted_string, recipients])
         scheduler.start()
-        logging.info(f"Reminder '{reminder_name}' scheduled for {event_start_time}.")
+        logging.info(f"Reminder '{reminder_name}' scheduled for 24h and 1h before {event_start_time}.")
     except Exception as e:
         logging.error(f"Failed to schedule reminder '{reminder_name}': {e}")
 
