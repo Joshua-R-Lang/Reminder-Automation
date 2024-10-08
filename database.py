@@ -111,6 +111,24 @@ def update_reminder_row(engine, reminder_name, reminder_description=None, event_
         logging.error(f"An error occurred while updating reminder: {e}")
         return None
     
+def list_all_reminders(engine):
+    query = "SELECT * FROM Reminder_Config"
+    try:
+        reminders_df = pd.read_sql(query, engine)
+        
+        if reminders_df.empty:
+            logging.info("No reminders found.")
+            print("No reminders found.")
+            return
+        
+        for index, reminder_row in reminders_df.iterrows():
+            formatted_reminder = format_reminder_to_string(reminders_df.loc[[index]])
+            print(formatted_reminder)
+
+    except Exception as e:
+        logging.error(f"An error occurred while listing all reminders: {e}")
+        print("An error occurred while listing reminders.")
+    
 def schedule_reminder(reminder_name, event_start, formatted_string, recipients):
     try:
         scheduler = BackgroundScheduler()

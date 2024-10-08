@@ -3,7 +3,7 @@ from database import *
 
 def main():
     engine = create_db_engine()
-    if not engine():
+    if not engine:
         print("Failed to create database engine.")
         return
 
